@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  # 1. Broker: Antrean Pesan (Redis)
+  broker:
+    image: redis:7-alpine
+    container_name: internal-broker
+    restart: always
+    volumes:
+      - broker_data:/data
+    networks:
+      - backend-net
+
+  # 2. Storage: Database Persisten (Postgres)
+  storage:
+    image: postgres:16-alpine
+    container_name: internal-storage
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: securepassword
+      POSTGRES_DB: log_db
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - backend-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d log_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 3. Aggregator: API & Worker (Otak Sistem)
+  aggregator:
+    build: ./aggregator
+    # HAPUS 'container_name' agar bisa dijalankan multi-replica/scale
+    depends_on:
+      storage:
+        condition: service_healthy
+      broker:
+        condition: service_started
+    
+    # --- UPDATE PENTING: MULTI-WORKER ---
+    # Menjalankan 2 instance aggregator sekaligus.
+    # Ini membuktikan 'Concurrency Safety' (Race Condition Proof).
+    deploy:
+      replicas: 2
+    
+    environment:
+      - DATABASE_URL=postgresql://admin:securepassword@storage:5432/log_db
+      - BROKER_URL=redis://broker:6379
+    
+    # Port Mapping Range:
+    # Karena ada 2 container, Docker akan memetakan:
+    # Aggregator-1 -> localhost:8080
+    # Aggregator-2 -> localhost:8081
+    ports:
+      - "8080-8081:8080"
+      
+    volumes:
+      - ./aggregator:/app
+    networks:
+      - backend-net
+
+  # 4. Publisher: Traffic Generator (Simulator)
+  publisher:
+    build: ./publisher
+    container_name: app-publisher
+    depends_on:
+      - aggregator
+    environment:
+      # Internal DNS Docker akan otomatis Load Balance ke 2 replica aggregator
+      - TARGET_URL=http://aggregator:8080/publish
+      - HEALTH_URL=http://aggregator:8080/stats
+      - TOTAL_EVENTS=25000
+      - DUPLICATE_RATIO=0.3
+    volumes:
+      - ./publisher:/app
+    networks:
+      - backend-net
+
+volumes:
+  pg_data:
+  broker_data:
+
+networks:
+  backend-net:
+    driver: bridge

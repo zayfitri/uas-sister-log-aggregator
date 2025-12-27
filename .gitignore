@@ -1,0 +1,17 @@
+# Abaikan cache Python (di mana saja)
+__pycache__/
+*.py[cod]
+
+# Abaikan folder pytest cache (PENTING)
+.pytest_cache/
+*/.pytest_cache/
+
+# Abaikan env dan setting vscode
+.env
+venv/
+.vscode/
+
+# Abaikan data database lokal (biar aman)
+pg_data/
+broker_data/
+aggregator_data/
