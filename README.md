@@ -7,8 +7,12 @@ cat << 'EOF' > README.md
 
 ---
 
-## 🎥 Video Demo
-> **[VIDEO SEDANG DI-UPLOAD - LINK AKAN MUNCUL DI SINI]** > *(Link video akan diupdate segera setelah proses recording selesai)*
+## 🎥 Video Demo & Laporan
+Berikut adalah video demonstrasi fitur Idempotency, Deduplication, dan Fault Tolerance:
+
+> ▶️ **[Tonton Video Demo di YouTube](https://youtu.be/BqJJB4Y9hec)**
+
+> 📄 **[Download Laporan Lengkap (PDF)](./report.pdf)**
 
 ---
 
@@ -74,10 +78,7 @@ docker compose ps
 Untuk menjalankan *Unit Test* guna memvalidasi logika deduplikasi:
 
 \`\`\`bash
-# Jika dijalankan dari luar container (pastikan library terinstall)
-pytest
-
-# ATAU jalankan dari dalam container (Rekomendasi)
-docker compose exec aggregator pytest
+# Jalankan dari dalam container (Rekomendasi)
+docker compose exec aggregator python -m pytest -v
 \`\`\`
 EOF
